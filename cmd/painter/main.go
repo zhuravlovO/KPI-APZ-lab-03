@@ -17,6 +17,8 @@ func main() {
 		parser lang.Parser  // Парсер команд.
 	)
 
+	opLoop.Mq = make(chan painter.Operation)
+
 	//pv.Debug = true
 	pv.Title = "Simple painter"
 

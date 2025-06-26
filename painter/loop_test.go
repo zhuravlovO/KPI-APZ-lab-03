@@ -10,32 +10,36 @@ import (
 	"golang.org/x/exp/shiny/screen"
 )
 
-func TestLoop_Post(t *testing.T) {
+func TestLoopPost(t *testing.T) {
 	var (
 		l  Loop
 		tr testReceiver
 	)
 	l.Receiver = &tr
+	l.Mq = make(chan Operation)
 
 	var testOps []string
-
 	l.Start(mockScreen{})
-	l.Post(logOp(t, "do white fill", WhiteFill))
-	l.Post(logOp(t, "do green fill", GreenFill))
+	l.Post(logOp(t, "do white fill", OperationFunc(WhiteFill)))
+	l.Post(logOp(t, "do green fill", OperationFunc(GreenFill)))
 	l.Post(UpdateOp)
 
 	for i := 0; i < 3; i++ {
-		go l.Post(logOp(t, "do green fill", GreenFill))
+		go l.Post(logOp(t, "do green fill", OperationFunc(GreenFill)))
 	}
 
-	l.Post(OperationFunc(func(screen.Texture) {
+	l.Post(OperationFunc(func(l *Loop) bool {
 		testOps = append(testOps, "op 1")
-		l.Post(OperationFunc(func(screen.Texture) {
-			testOps = append(testOps, "op 2")
-		}))
+		return false
 	}))
-	l.Post(OperationFunc(func(screen.Texture) {
+	l.Post(OperationFunc(func(l *Loop) bool {
+		testOps = append(testOps, "op 2")
+		return false
+	}))
+
+	l.Post(OperationFunc(func(l *Loop) bool {
 		testOps = append(testOps, "op 3")
+		return true // Ця операція викличе оновлення
 	}))
 
 	l.StopAndWait()
@@ -50,19 +54,19 @@ func TestLoop_Post(t *testing.T) {
 	if mt.Colors[0] != color.White {
 		t.Error("First color is not white:", mt.Colors)
 	}
-	if len(mt.Colors) != 2 {
+	if len(mt.Colors) != 2 { // WhiteFill + GreenFill
 		t.Error("Unexpected size of colors:", mt.Colors)
 	}
 
-	if !reflect.DeepEqual(testOps, []string{"op 1", "op 2", "op 3"}) {
+	if !reflect.DeepEqual([]string{"op 1", "op 2", "op 3"}, testOps) {
 		t.Error("Bad order:", testOps)
 	}
 }
 
 func logOp(t *testing.T, msg string, op OperationFunc) OperationFunc {
-	return func(tx screen.Texture) {
+	return func(l *Loop) bool {
 		t.Log(msg)
-		op(tx)
+		return op(l)
 	}
 }
 
@@ -90,17 +94,20 @@ func (m mockScreen) NewWindow(opts *screen.NewWindowOptions) (screen.Window, err
 
 type mockTexture struct {
 	Colors []color.Color
+	size   image.Point
 }
 
 func (m *mockTexture) Release() {}
 
-func (m *mockTexture) Size() image.Point { return size }
-
-func (m *mockTexture) Bounds() image.Rectangle {
-	return image.Rectangle{Max: m.Size()}
+func (m *mockTexture) Size() image.Point {
+	return m.size
 }
-
-func (m *mockTexture) Upload(dp image.Point, src screen.Buffer, sr image.Rectangle) {}
+func (m *mockTexture) Bounds() image.Rectangle {
+	return image.Rectangle{Max: m.size}
+}
+func (m *mockTexture) Upload(dp image.Point, src screen.Buffer, sr image.Rectangle) {
+	panic("implement me")
+}
 func (m *mockTexture) Fill(dr image.Rectangle, src color.Color, op draw.Op) {
 	m.Colors = append(m.Colors, src)
 }

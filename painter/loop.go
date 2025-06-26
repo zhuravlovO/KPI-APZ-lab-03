@@ -1,70 +1,66 @@
 package painter
 
 import (
-	"fmt"
 	"image"
 
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/mobile/event/mouse"
 )
 
-// Receiver отримує текстуру, яка була підготовлена в результаті виконання команд у циклі подій.
 type Receiver interface {
 	Update(t screen.Texture)
 }
 
-// Loop реалізує цикл подій для формування текстури отриманої через виконання операцій отриманих з внутрішньої черги.
 type Loop struct {
 	Receiver Receiver
+	next     screen.Texture
+	prev     screen.Texture
+	Mq       chan Operation
 
-	next screen.Texture // текстура, яка зараз формується
-	prev screen.Texture // текстура, яка була відправлення останнього разу у Receiver
+	stop    chan struct{}
+	stopReq bool
 
-	mq messageQueue
-
-	stop             chan struct{}
-	stopReq          bool
 	figureX, figureY int
 }
 
-var size = image.Pt(400, 400)
-
-// Start запускає цикл подій. Цей метод потрібно запустити до того, як викликати на ньому будь-які інші методи.
 func (l *Loop) Start(s screen.Screen) {
+	size := image.Point{X: 800, Y: 800}
 	l.next, _ = s.NewTexture(size)
 	l.prev, _ = s.NewTexture(size)
 
-	// TODO: стартувати цикл подій.
+	l.stop = make(chan struct{})
+
+	l.figureX = 400
+	l.figureY = 400
+
+	go func() {
+		for op := range l.Mq {
+			if op.Do(l) {
+				l.Receiver.Update(l.next)
+			}
+		}
+		close(l.stop)
+	}()
 }
 
-// Post додає нову операцію у внутрішню чергу.
 func (l *Loop) Post(op Operation) {
-	if update := op.Do(l.next); update {
-		l.Receiver.Update(l.next)
-		l.next, l.prev = l.prev, l.next
-	}
-}
-
-// StopAndWait сигналізує про необхідність завершити цикл та блокується до моменту його повної зупинки.
-func (l *Loop) StopAndWait() {
-}
-
-// TODO: Реалізувати чергу подій.
-type messageQueue struct{}
-
-func (mq *messageQueue) push(op Operation) {}
-
-func (mq *messageQueue) pull() Operation {
-	return nil
-}
-
-func (mq *messageQueue) empty() bool {
-	return false
+	l.Mq <- op
 }
 
 func (l *Loop) HandleMouse(e mouse.Event) {
 	if e.Button == mouse.ButtonRight {
-		op := MoveFigureOp{X: int(e.X), Y: int(e.Y)}
-		fmt.Printf("Should move figure to %d, %d\n", op.X, op.Y)
+		op := MoveFigureOp{
+			X: int(e.X),
+			Y: int(e.Y),
+		}
+		l.Post(op)
 	}
+}
+
+func (l *Loop) StopAndWait() {
+	if !l.stopReq {
+		l.stopReq = true
+		close(l.Mq)
+	}
+	<-l.stop
 }

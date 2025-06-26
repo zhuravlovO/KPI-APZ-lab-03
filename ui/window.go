@@ -41,9 +41,15 @@ func (pw *Visualizer) Update(t screen.Texture) {
 }
 
 func (pw *Visualizer) run(s screen.Screen) {
-	w, err := s.NewWindow(&screen.NewWindowOptions{
-		Title: pw.Title,
-	})
+	// Створюємо опції, де чітко вказуємо бажаний розмір та назву вікна.
+	opts := &screen.NewWindowOptions{
+		Title:  pw.Title,
+		Width:  800,
+		Height: 800,
+	}
+
+	// Передаємо ці опції при створенні вікна.
+	w, err := s.NewWindow(opts)
 	if err != nil {
 		log.Fatal("Failed to initialize the app window:", err)
 	}
@@ -52,6 +58,8 @@ func (pw *Visualizer) run(s screen.Screen) {
 		close(pw.done)
 	}()
 
+	// Викликаємо callback, якщо він встановлений.
+	// Це запустить наш painter.Loop.
 	if pw.OnScreenReady != nil {
 		pw.OnScreenReady(s)
 	}
@@ -106,7 +114,7 @@ func detectTerminate(e any) bool {
 func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
 	switch e := e.(type) {
 
-	case size.Event: // Оновлення даних про розмір вікна.
+	case size.Event:
 		pw.sz = e
 
 	case error:
@@ -114,15 +122,13 @@ func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
 
 	case mouse.Event:
 		if pw.OnMouseEvent != nil {
-			pw.OnMouseEvent(e) // <-- ЗАМІНІТЬ ВАШ КОД НА ЦЕ
+			pw.OnMouseEvent(e) //
 		}
 
 	case paint.Event:
-		// Малювання контенту вікна.
 		if t == nil {
 			pw.drawDefaultUI()
 		} else {
-			// Використання текстури отриманої через виклик Update.
 			pw.w.Scale(pw.sz.Bounds(), t, t.Bounds(), draw.Src, nil)
 		}
 		pw.w.Publish()
