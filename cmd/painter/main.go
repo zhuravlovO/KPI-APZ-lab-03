@@ -21,6 +21,7 @@ func main() {
 	pv.Title = "Simple painter"
 
 	pv.OnScreenReady = opLoop.Start
+	pv.OnMouseEvent = opLoop.HandleMouse
 	opLoop.Receiver = &pv
 
 	go func() {

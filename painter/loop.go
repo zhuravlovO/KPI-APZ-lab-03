@@ -1,9 +1,11 @@
 package painter
 
 import (
+	"fmt"
 	"image"
 
 	"golang.org/x/exp/shiny/screen"
+	"golang.org/x/mobile/event/mouse"
 )
 
 // Receiver отримує текстуру, яка була підготовлена в результаті виконання команд у циклі подій.
@@ -20,8 +22,9 @@ type Loop struct {
 
 	mq messageQueue
 
-	stop    chan struct{}
-	stopReq bool
+	stop             chan struct{}
+	stopReq          bool
+	figureX, figureY int
 }
 
 var size = image.Pt(400, 400)
@@ -57,4 +60,11 @@ func (mq *messageQueue) pull() Operation {
 
 func (mq *messageQueue) empty() bool {
 	return false
+}
+
+func (l *Loop) HandleMouse(e mouse.Event) {
+	if e.Button == mouse.ButtonRight {
+		op := MoveFigureOp{X: int(e.X), Y: int(e.Y)}
+		fmt.Printf("Should move figure to %d, %d\n", op.X, op.Y)
+	}
 }

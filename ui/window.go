@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"golang.org/x/exp/shiny/driver"
-	"golang.org/x/exp/shiny/imageutil"
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/image/draw"
 	"golang.org/x/mobile/event/key"
@@ -20,10 +19,10 @@ type Visualizer struct {
 	Title         string
 	Debug         bool
 	OnScreenReady func(s screen.Screen)
-
-	w    screen.Window
-	tx   chan screen.Texture
-	done chan struct{}
+	OnMouseEvent  func(e mouse.Event)
+	w             screen.Window
+	tx            chan screen.Texture
+	done          chan struct{}
 
 	sz  size.Event
 	pos image.Rectangle
@@ -114,8 +113,8 @@ func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
 		log.Printf("ERROR: %s", e)
 
 	case mouse.Event:
-		if t == nil {
-			// TODO: Реалізувати реакцію на натискання кнопки миші.
+		if pw.OnMouseEvent != nil {
+			pw.OnMouseEvent(e) // <-- ЗАМІНІТЬ ВАШ КОД НА ЦЕ
 		}
 
 	case paint.Event:
@@ -131,12 +130,11 @@ func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
 }
 
 func (pw *Visualizer) drawDefaultUI() {
-	pw.w.Fill(pw.sz.Bounds(), color.Black, draw.Src) // Фон.
+	pw.w.Fill(pw.sz.Bounds(), color.White, draw.Src)
+	blue := color.RGBA{B: 0xff, A: 0xff}
+	rect1 := image.Rect(350, 250, 450, 550)
+	rect2 := image.Rect(250, 350, 550, 450)
 
-	// TODO: Змінити колір фону та додати відображення фігури у вашому варіанті.
-
-	// Малювання білої рамки.
-	for _, br := range imageutil.Border(pw.sz.Bounds(), 10) {
-		pw.w.Fill(br, color.White, draw.Src)
-	}
+	pw.w.Fill(rect1, blue, draw.Src)
+	pw.w.Fill(rect2, blue, draw.Src)
 }
