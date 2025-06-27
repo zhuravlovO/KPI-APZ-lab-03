@@ -3,18 +3,16 @@ package main
 import (
 	"net/http"
 
-	"github.com/roman-mazur/architecture-lab-3/painter"
-	"github.com/roman-mazur/architecture-lab-3/painter/lang"
-	"github.com/roman-mazur/architecture-lab-3/ui"
+	"github.com/zhuravlovO/KPI-APZ-lab-03/painter"
+	"github.com/zhuravlovO/KPI-APZ-lab-03/painter/lang"
+	"github.com/zhuravlovO/KPI-APZ-lab-03/ui"
 )
 
 func main() {
 	var (
-		pv ui.Visualizer // Візуалізатор створює вікно та малює у ньому.
-
-		// Потрібні для частини 2.
-		opLoop painter.Loop // Цикл обробки команд.
-		parser lang.Parser  // Парсер команд.
+		pv     ui.Visualizer
+		opLoop painter.Loop
+		parser lang.Parser
 	)
 
 	opLoop.Mq = make(chan painter.Operation)

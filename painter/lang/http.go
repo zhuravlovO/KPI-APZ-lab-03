@@ -1,16 +1,14 @@
 package lang
 
 import (
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
-	"github.com/roman-mazur/architecture-lab-3/painter"
+	"github.com/zhuravlovO/KPI-APZ-lab-03/painter"
 )
 
-// HttpHandler конструює обробник HTTP запитів, який дані з запиту віддає у Parser, а потім відправляє отриманий список
-// операцій у painter.Loop.
 func HttpHandler(loop *painter.Loop, p *Parser) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		var in io.Reader = r.Body
@@ -20,12 +18,14 @@ func HttpHandler(loop *painter.Loop, p *Parser) http.Handler {
 
 		cmds, err := p.Parse(in)
 		if err != nil {
-			log.Printf("Bad script: %s", err)
-			rw.WriteHeader(http.StatusBadRequest)
+			http.Error(rw, "Bad script: "+err.Error(), http.StatusBadRequest)
 			return
 		}
+		finalOps := []painter.Operation{painter.ResetOp}
+		finalOps = append(finalOps, cmds...)
 
-		loop.Post(painter.OperationList(cmds))
+		fmt.Printf("Parser created %d operations, total with reset: %d\n", len(cmds), len(finalOps))
+		loop.Post(painter.OperationList(finalOps))
 		rw.WriteHeader(http.StatusOK)
 	})
 }

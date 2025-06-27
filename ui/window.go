@@ -41,14 +41,11 @@ func (pw *Visualizer) Update(t screen.Texture) {
 }
 
 func (pw *Visualizer) run(s screen.Screen) {
-	// Створюємо опції, де чітко вказуємо бажаний розмір та назву вікна.
 	opts := &screen.NewWindowOptions{
 		Title:  pw.Title,
 		Width:  800,
 		Height: 800,
 	}
-
-	// Передаємо ці опції при створенні вікна.
 	w, err := s.NewWindow(opts)
 	if err != nil {
 		log.Fatal("Failed to initialize the app window:", err)
@@ -58,8 +55,6 @@ func (pw *Visualizer) run(s screen.Screen) {
 		close(pw.done)
 	}()
 
-	// Викликаємо callback, якщо він встановлений.
-	// Це запустить наш painter.Loop.
 	if pw.OnScreenReady != nil {
 		pw.OnScreenReady(s)
 	}
@@ -136,11 +131,5 @@ func (pw *Visualizer) handleEvent(e any, t screen.Texture) {
 }
 
 func (pw *Visualizer) drawDefaultUI() {
-	pw.w.Fill(pw.sz.Bounds(), color.White, draw.Src)
-	blue := color.RGBA{B: 0xff, A: 0xff}
-	rect1 := image.Rect(350, 250, 450, 550)
-	rect2 := image.Rect(250, 350, 550, 450)
-
-	pw.w.Fill(rect1, blue, draw.Src)
-	pw.w.Fill(rect2, blue, draw.Src)
+	pw.w.Fill(pw.sz.Bounds(), color.Black, draw.Src)
 }

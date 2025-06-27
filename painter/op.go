@@ -6,12 +6,11 @@ import (
 	"image/draw"
 )
 
-// Operation змінює вхідну текстуру.
+// Operation — це інтерфейс для будь-якої дії, що змінює стан сцени.
 type Operation interface {
 	Do(l *Loop) bool
 }
 
-// OperationList групує список операції в одну.
 type OperationList []Operation
 
 func (ol OperationList) Do(l *Loop) (ready bool) {
@@ -21,47 +20,74 @@ func (ol OperationList) Do(l *Loop) (ready bool) {
 	return
 }
 
-// UpdateOp операція, яка не змінює текстуру, але сигналізує, що текстуру потрібно розглядати як готову.
 var UpdateOp = updateOp{}
 
 type updateOp struct{}
 
-func (op updateOp) Do(l *Loop) bool { return true }
+func (op updateOp) Do(l *Loop) bool {
+	l.next.Fill(l.next.Bounds(), l.BgColor, draw.Src)
+	if l.BgRect != nil {
+		l.next.Fill(*l.BgRect, color.Black, draw.Src)
+	}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+	for _, fig := range l.Figures {
+		verticalRect := image.Rect(fig.X+50, fig.Y-200, fig.X+150, fig.Y+200)
+		horizontalRect := image.Rect(fig.X-200, fig.Y-50, fig.X+50, fig.Y+50)
+		l.next.Fill(verticalRect, blue, draw.Src)
+		l.next.Fill(horizontalRect, blue, draw.Src)
+	}
+	return true
+}
 
-// OperationFunc використовується для перетворення функції оновлення текстури в Operation.
 type OperationFunc func(l *Loop) bool
 
 func (f OperationFunc) Do(l *Loop) bool {
 	return f(l)
 }
 
-// WhiteFill зафарбовує тестуру у білий колір. Може бути викоистана як Operation через OperationFunc(WhiteFill).
-func WhiteFill(l *Loop) bool {
-	l.next.Fill(l.next.Bounds(), color.White, draw.Src)
-	return true
+var (
+	WhiteFill = OperationFunc(func(l *Loop) bool {
+		l.BgColor = color.White
+		return false
+	})
+	GreenFill = OperationFunc(func(l *Loop) bool {
+		l.BgColor = color.RGBA{G: 0xff, A: 0xff}
+		return false
+	})
+)
+var ResetOp = OperationFunc(func(l *Loop) bool {
+	l.BgColor = color.Black
+	l.BgRect = nil
+	l.Figures = make([]*Figure, 0)
+	return false
+})
+
+type BgRectOp struct {
+	Rect image.Rectangle
 }
 
-// GreenFill зафарбовує тестуру у зелений колір. Може бути викоистана як Operation через OperationFunc(GreenFill).
-func GreenFill(l *Loop) bool {
-	green := color.RGBA{G: 0xff, A: 0xff}
-	l.next.Fill(l.next.Bounds(), green, draw.Src)
-	return true
+func (op BgRectOp) Do(l *Loop) bool {
+	l.BgRect = &op.Rect
+	return false
 }
 
-type MoveFigureOp struct {
+type FigureOp struct {
 	X, Y int
 }
 
-func (op MoveFigureOp) Do(l *Loop) bool {
-	l.figureX = op.X
-	l.figureY = op.Y
-	l.next.Fill(l.next.Bounds(), color.White, draw.Src)
+func (op FigureOp) Do(l *Loop) bool {
+	l.Figures = append(l.Figures, &Figure{X: op.X, Y: op.Y})
+	return false
+}
 
-	blue := color.RGBA{B: 0xff, A: 0xff}
-	verticalRect := image.Rect(l.figureX-50, l.figureY-150, l.figureX+50, l.figureY+150)
-	horizontalRect := image.Rect(l.figureX-150, l.figureY-50, l.figureX+150, l.figureY+50)
+type MoveOp struct {
+	X, Y int
+}
 
-	l.next.Fill(verticalRect, blue, draw.Src)
-	l.next.Fill(horizontalRect, blue, draw.Src)
-	return true
+func (op MoveOp) Do(l *Loop) bool {
+	for _, fig := range l.Figures {
+		fig.X += op.X
+		fig.Y += op.Y
+	}
+	return false
 }
