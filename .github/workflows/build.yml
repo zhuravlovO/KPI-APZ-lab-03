@@ -16,4 +16,4 @@ jobs:
     - name: Test
       run: go test -v ./...
     - name: Build
-  run: go build -v -o awesome-painter ./cmd/painter
+      run: go build -v -o awesome-painter ./cmd/painter
